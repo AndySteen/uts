@@ -1,0 +1,423 @@
+#!/bin/bash
+
+
+# 提示用户确认
+read -p "是否继续执行脚本？(y/n): " confirm
+
+# 检查用户输入
+if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+    echo "用户取消执行脚本。"
+    exit 1
+fi
+
+
+# 检查是否为Ubuntu系统
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    if [ "$ID" != "ubuntu" ]; then
+        echo "此脚本仅适用于Ubuntu系统。"
+        exit 1
+    fi
+else
+    echo "无法确定操作系统类型。"
+    exit 1
+fi
+# 检查是否以root用户运行
+if [ "$(id -u)" -ne 0 ]; then
+    echo "此脚本需要root用户权限运行，请使用sudo运行。"
+    exit 1
+fi
+
+
+# 更新软件列表
+echo "更新软件列表"
+sudo apt update
+
+# 安装Java JDK 21
+echo "安装openjdk21(java21)"
+sudo apt install -y openjdk-21-jdk
+
+# 卸载旧版本的Docker
+echo "卸载旧版本的Docker"
+for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do
+    sudo apt-get remove -y $pkg
+done
+
+# 从阿里云镜像源安装最新版本的Docker
+echo "安装Docker最新版"
+sudo apt-get -y install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL http://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] http://mirrors.aliyun.com/docker-ce/linux/ubuntu \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+echo "Docker版本号"
+docker -v
+
+# 安装MCSManager
+echo "安装MCSManager"
+mcsmanager_install_path="/opt/mcsmanager"
+mcsmanager_download_addr="http://oss.duzuii.com/d/MCSManager/MCSManager/MCSManager-v10-linux.tar.gz"
+package_name="MCSManager-v10-linux.tar.gz"
+node="v16.20.2"
+arch=$(uname -m)
+
+# 检查系统架构
+if [[ "$arch" == x86_64 ]]; then
+    arch=x64
+elif [[ $arch == aarch64 ]]; then
+    arch=arm64
+elif [[ $arch == arm ]]; then
+    arch=armv7l
+elif [[ $arch == ppc64le ]]; then
+    arch=ppc64le
+elif [[ $arch == s390x ]]; then
+    arch=s390x
+else
+    echo "不支持此架构，请手动安装：https://github.com/MCSManager/MCSManager#linux"
+    exit 1
+fi
+
+# 安装依赖软件
+echo "安装依赖软件 (git, tar, wget)"
+if [[ -x "$(command -v yum)" ]]; then
+    sudo yum install -y git tar wget
+elif [[ -x "$(command -v apt-get)" ]]; then
+    sudo apt-get install -y git tar wget
+elif [[ -x "$(command -v pacman)" ]]; then
+    sudo pacman -S --noconfirm git tar wget
+elif [[ -x "$(command -v zypper)" ]]; then
+    sudo zypper --non-interactive install git tar wget
+else
+    echo "找不到您的包管理器！您可能需要手动安装git、tar和wget。"
+    exit 1
+fi
+
+# 安装Node.js环境
+echo "安装Node.js环境"
+curl -sL https://deb.nodesource.com/setup_$node.lts | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# 安装MCSManager
+echo "安装MCSManager"
+mkdir -p $mcsmanager_install_path
+cd $mcsmanager_install_path
+wget $mcsmanager_download_addr
+tar -zxvf $package_name
+cd MCSManager
+npm install
+
+# 创建MCSManager服务
+echo "创建MCSManager服务"
+sudo cp ./systemd/mcsmanager.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable mcsmanager
+sudo systemctl start mcsmanager
+
+# 重启系统
+echo "安装完成，系统将在5秒后重启"
+sleep 5s
+sudo reboot
+
+ if [ "$(id -u)" -ne 0]; then
+  echo "This script must be run as root. Please use \"sudo bash\" instead."
+  echo_yellow "此脚本需要root用户权限运行，请使用root用户或在运行命令前加上sudo，谢谢"
+  exit 1
+fi
+
+ echo "此脚本安装了java-jdk-21，docker最新版，mcsm最新版"
+ echo "***********************************************************************************************************************************"
+ echo "更新软件列表"
+ sudo apt update
+
+ echo "安装openjdk21(java21)"
+ sudo apt install openjdk-21-jdk
+ 
+ echo "删掉旧docker"
+ for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do apt-get remove $pkg; done
+ 
+ echo "正在安装docker最新版"
+ sudo apt-get -y install ca-certificates curl
+ sudo install -m 0755 -d /etc/apt/keyrings
+ sudo curl -fsSL http://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+ sudo chmod a+r /etc/apt/keyrings/docker.asc
+ echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] http://mirrors.aliyun.com/docker-ce/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  
+  echo "更新软件列表"
+  sudo apt update
+  sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+  echo "docker版本号"
+  
+  docker -v
+  
+  echo "安装mcsmanager"
+  
+  
+  
+  echo "mcsm安装"
+  # 嵌入mcsm脚本
+  
+  # 中国大陆需要安装脚本额外配置镜像地址以及低版本的 NodeJS 环境
+mcsmanager_install_path="/opt/mcsmanager"
+mcsmanager_download_addr="http://oss.duzuii.com/d/MCSManager/MCSManager/MCSManager-v10-linux.tar.gz"
+package_name="MCSManager-v10-linux.tar.gz"
+node="v16.20.2"
+arch=$(uname -m)
+
+
+printf "\033c"
+
+echo_cyan() {
+  printf '\033[1;36m%b\033[0m\n' "$@"
+}
+echo_red() {
+  printf '\033[1;31m%b\033[0m\n' "$@"
+}
+
+echo_green() {
+  printf '\033[1;32m%b\033[0m\n' "$@"
+}
+
+echo_cyan_n() {
+  printf '\033[1;36m%b\033[0m' "$@"
+}
+
+echo_yellow() {
+  printf '\033[1;33m%b\033[0m\n' "$@"
+}
+
+# script info
+echo_cyan "+----------------------------------------------------------------------
+| MCSManager 开始安装
++----------------------------------------------------------------------
+"
+
+Red_Error() {
+  echo '================================================='
+  printf '\033[1;31;40m%b\033[0m\n' "$@"
+  echo '================================================='
+  exit 1
+}
+
+Install_Node() {
+  echo_cyan_n "[+] Install Node.JS environment...\n"
+
+  rm -irf "$node_install_path"
+
+  cd /opt || Red_Error "[x] Failed to enter /opt"
+
+  rm -rf "node-$node-linux-$arch.tar.gz"
+
+  # From https://nodejs.org/
+  # wget "https://nodejs.org/dist/$node/node-$node-linux-$arch.tar.gz" || Red_Error "[x] Failed to download node release"
+
+  # From https://registry.npmmirror.com/
+  wget "https://registry.npmmirror.com/-/binary/node/$node/node-$node-linux-$arch.tar.gz" || Red_Error "[x] Failed to download node release"
+
+  tar -zxf "node-$node-linux-$arch.tar.gz" || Red_Error "[x] Failed to untar node"
+
+  rm -rf "node-$node-linux-$arch.tar.gz"
+
+  if [[ -f "$node_install_path"/bin/node ]] && [[ "$("$node_install_path"/bin/node -v)" == "$node" ]]; then
+    echo_green "Success"
+  else
+    Red_Error "[x] Node installation failed!"
+  fi
+
+  echo
+  echo_yellow "=============== Node.JS Version ==============="
+  echo_yellow " node: $("$node_install_path"/bin/node -v)"
+  echo_yellow " npm: v$(env "$node_install_path"/bin/node "$node_install_path"/bin/npm -v)"
+  echo_yellow "=============== Node.JS Version ==============="
+  echo
+
+  sleep 3
+}
+
+Install_MCSManager() {
+  echo_cyan "[+] Install MCSManager..."
+
+  # stop service
+  systemctl disable --now mcsm-{web,daemon}
+
+  # delete service
+  rm -rf /etc/systemd/system/mcsm-{daemon,web}.service
+  systemctl daemon-reload
+
+  mkdir -p "${mcsmanager_install_path}" || Red_Error "[x] Failed to create ${mcsmanager_install_path}"
+
+  # cd /opt/mcsmanager
+  cd "${mcsmanager_install_path}" || Red_Error "[x] Failed to enter ${mcsmanager_install_path}"
+
+  # download MCSManager release
+  wget "${mcsmanager_download_addr}" || Red_Error "[x] Failed to download MCSManager"
+  tar -zxf ${package_name} -o || Red_Error "[x] Failed to untar ${package_name}"
+  rm -rf "${mcsmanager_install_path}/${package_name}"
+
+  # echo "[→] cd daemon"
+  cd "${mcsmanager_install_path}/daemon" || Red_Error "[x] Failed to enter ${mcsmanager_install_path}/daemon"
+
+  echo_cyan "[+] Install MCSManager-Daemon dependencies..."
+  env "$node_install_path"/bin/node "$node_install_path"/bin/npm install --registry=https://registry.npmmirror.com --production --no-fund --no-audit &>/dev/null || Red_Error "[x] Failed to npm install in ${mcsmanager_install_path}/daemon"
+
+  # echo "[←] cd .."
+  cd "${mcsmanager_install_path}/web" || Red_Error "[x] Failed to enter ${mcsmanager_install_path}/web"
+
+  echo_cyan "[+] Install MCSManager-Web dependencies..."
+  env "$node_install_path"/bin/node "$node_install_path"/bin/npm install --registry=https://registry.npmmirror.com --production --no-fund --no-audit &>/dev/null || Red_Error "[x] Failed to npm install in ${mcsmanager_install_path}/web"
+
+  echo
+  echo_yellow "=============== MCSManager ==============="
+  echo_green "Daemon: ${mcsmanager_install_path}/daemon"
+  echo_green "Web: ${mcsmanager_install_path}/web"
+  echo_yellow "=============== MCSManager ==============="
+  echo
+  echo_green "[+] MCSManager installation success!"
+
+  chmod -R 755 "$mcsmanager_install_path"
+
+  sleep 3
+}
+
+Create_Service() {
+  echo_cyan "[+] Create MCSManager service..."
+
+  echo "[Unit]
+Description=MCSManager-Daemon
+
+[Service]
+WorkingDirectory=${mcsmanager_install_path}/daemon
+ExecStart=${node_install_path}/bin/node app.js
+ExecReload=/bin/kill -s QUIT \$MAINPID
+ExecStop=/bin/kill -s QUIT \$MAINPID
+Environment=\"PATH=${PATH}\"
+
+[Install]
+WantedBy=multi-user.target
+" >/etc/systemd/system/mcsm-daemon.service
+
+  echo "[Unit]
+Description=MCSManager-Web
+
+[Service]
+WorkingDirectory=${mcsmanager_install_path}/web
+ExecStart=${node_install_path}/bin/node app.js
+ExecReload=/bin/kill -s QUIT \$MAINPID
+ExecStop=/bin/kill -s QUIT \$MAINPID
+Environment=\"PATH=${PATH}\"
+
+[Install]
+WantedBy=multi-user.target
+" >/etc/systemd/system/mcsm-web.service
+
+  systemctl daemon-reload
+  systemctl enable --now mcsm-{daemon,web}.service
+  echo_green "Registered!"
+
+  sleep 2
+
+  printf "\n\n\n\n"
+
+  echo_yellow "=================================================================="
+  echo_green "Installation is complete! Welcome to the MCSManager!!!"
+  echo_yellow " "
+  echo_cyan_n "HTTP Web Service:        "
+  echo_yellow "http://<Your IP>:23333  (Browser)"
+  echo_cyan_n "Daemon Address:          "
+  echo_yellow "ws://<Your IP>:24444    (Cluster)"
+  echo_red "You must expose ports 23333 and 24444 to use the service properly on the Internet."
+  echo_yellow " "
+  echo_cyan "Usage:"
+  echo_cyan "systemctl start mcsm-{daemon,web}.service"
+  echo_cyan "systemctl stop mcsm-{daemon,web}.service"
+  echo_cyan "systemctl restart mcsm-{daemon,web}.service"
+  echo_yellow " "
+  echo_green "Official Document: https://docs.mcsmanager.com/"
+  echo_yellow "=================================================================="
+}
+
+# Environmental inspection
+if [[ "$arch" == x86_64 ]]; then
+  arch=x64
+  #echo "[-] x64 architecture detected"
+elif [[ $arch == aarch64 ]]; then
+  arch=arm64
+  #echo "[-] 64-bit ARM architecture detected"
+elif [[ $arch == arm ]]; then
+  arch=armv7l
+  #echo "[-] 32-bit ARM architecture detected"
+elif [[ $arch == ppc64le ]]; then
+  arch=ppc64le
+  #echo "[-] IBM POWER architecture detected"
+elif [[ $arch == s390x ]]; then
+  arch=s390x
+  #echo "[-] IBM LinuxONE architecture detected"
+else
+  Red_Error "[x] Sorry, this architecture is not supported yet!\n[x]Please try to install manually: https://github.com/MCSManager/MCSManager#linux"
+fi
+
+# Define the variable Node installation directory
+node_install_path="/opt/node-$node-linux-$arch"
+
+# Check network connection
+echo_cyan "[-] Architecture: $arch"
+
+# Install related software
+echo_cyan_n "[+] Installing dependent software (git, tar, wget)... "
+if [[ -x "$(command -v yum)" ]]; then
+  yum install -y git tar wget
+elif [[ -x "$(command -v apt-get)" ]]; then
+  apt-get install -y git tar wget
+elif [[ -x "$(command -v pacman)" ]]; then
+  pacman -S --noconfirm git tar wget
+elif [[ -x "$(command -v zypper)" ]]; then
+  zypper --non-interactive install git tar wget
+else
+  echo_red "[!] Cannot find your package manager! You may need to install git, tar and wget manually!"
+fi
+
+# Determine whether the relevant software is installed successfully
+if [[ -x "$(command -v git)" && -x "$(command -v tar)" && -x "$(command -v wget)" ]]; then
+  echo_green "Success"
+else
+  Red_Error "[x] Failed to find git, tar and wget, please install them manually!"
+fi
+
+# Install the Node environment
+Install_Node
+
+# Install MCSManager
+Install_MCSManager
+
+# Create MCSManager background service
+Create_Service
+
+
+
+#             小脚本来自
+#              AndySteen
+#              @eq_az
+# mcsm部分为嵌入官方脚本以实现功能
+#      docker安装来自1panel脚本
+  echo "The github link of the MCSManager Panel Maintainer is https://github.com/unitwk"
+  
+  
+#      https://github.com/MCSManager/MCSManager/graphs/contributors
+#MCSManager Panel from https://github.com/MCSManager/MCSManager
+
+#      https://github.com/1Panel-dev/1Panel
+#Docker from https://github.com/1Panel-dev/1Panel/blob/master/README_CN.md
+
+
+
+# 重启系统
+echo "安装完成，系统将在5秒后重启"
+sleep 5s
+sudo reboot
